@@ -3,11 +3,15 @@
     xmlns:five="http://namespaces.zope.org/five"
     xmlns:browser="http://namespaces.zope.org/browser"
     xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    xmlns:zcml="http://namespaces.zope.org/zcml"
     i18n_domain="collective.pfg.signup">
 
     <includeDependencies package="." />
+    
+    <include zcml:condition="installed Products.PloneFormGen"  package=".pfg" />
+    <include zcml:condition="installed collective.easyform"  package=".easyform" />
 
-    <five:registerPackage package="." initialize=".initialize" />
+    <five:registerPackage zcml:condition="installed Products.PloneFormGen"  package="." initialize=".pfg.initialize" />
 
     <class class=".adapter.SignUpAdapter" />
 
