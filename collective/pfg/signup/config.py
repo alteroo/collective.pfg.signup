@@ -4,3 +4,6 @@ PROJECTNAME = 'collective.pfg.signup'
 ADD_PERMISSIONS = {
     'SignUpAdapter': 'collective.pfg.signup: Add SignUpAdapter',
 }
+
+
+MODIFY_PORTAL_CONTENT = 'cmf.ModifyPortalContent'

@@ -19,14 +19,21 @@ from Products.PloneFormGen.interfaces import IPloneFormGenActionAdapter
 from Products.TALESField import TALESString
 
 from collective.pfg.signup import _
+from collective.pfg.signup.config import MODIFY_PORTAL_CONTENT
 from collective.pfg.signup.config import PROJECTNAME
 from collective.pfg.signup.interfaces import ISignUpAdapter
+from collective.pfg.signup.validators import isTALES
 from datetime import datetime
 from email import message_from_string
 from plone import api
+from plone.app.z3cform import widget
+from plone.autoform import directives
+from plone.directives import form
 from plone.registry.interfaces import IRegistry
+from plone.supermodel import model
 from smtplib import SMTPRecipientsRefused
 from smtplib import SMTPServerDisconnected
+from zope import schema
 from zope.component import getUtility
 from zope.interface import implements
 
@@ -36,150 +43,152 @@ import re
 import string
 import transaction
 
-SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
+class SignUpAdapterSchema(model.Schema):
 
-    atapi.StringField(
-        'full_name_field',
-        default='fullname',
+    full_name_field = schema.TextLine(
+        default=u'fullname',
         required=False,
-        widget=atapi.StringWidget(
-            label=_(u'label_full_name', default=u'Full Name Field'),  # noqa H702
-            description=_(
-                u'help_full_name_field',
-                default=u"""Enter the id of the field that will be used for the
-                            user's full name."""),
-        ),
-    ),
+        title=_(u'label_full_name', default=u'Full Name Field'),  # noqa H702
+        description=_(
+            u'help_full_name_field',
+            default=u"""Enter the id of the field that will be used for the
+                        user's full name."""),
+    )
 
-    atapi.StringField(
-        'username_field',
+    username_field = schema.TextLine(
         required=False,
-        widget=atapi.StringWidget(
-            label=_(u'label_username', default=u'Username Field'),
-            description=_(
-                u'help_username_field',
-                default=u"""Enter the id of the field that will be used for the
-                            user's user id. If this field is left empty the
-                            email address will be used for the username."""),
-        ),
-    ),
+        title=_(u'label_username', default=u'Username Field'),
+        description=_(
+            u'help_username_field',
+            default=u"""Enter the id of the field that will be used for the
+                        user's user id. If this field is left empty the
+                        email address will be used for the username."""),
+    )
 
-    atapi.StringField(
-        'email_field',
-        default='email',
+    email_field = schema.TextLine(
+        default=u'email',
         required=True,
-        widget=atapi.StringWidget(
-            label=_(u'label_email', default=u'Email Field'),
-            description=_(
-                u'help_email_field',
-                default=u"""Enter the id of the field that will be used for the
-                            user's email address. This field is required."""),
-        ),
-    ),
+        title=_(u'label_email', default=u'Email Field'),
+        description=_(
+            u'help_email_field',
+            default=u"""Enter the id of the field that will be used for the
+                        user's email address. This field is required."""),
+    )
 
-    atapi.StringField(
-        'password_field',
+    password_field = schema.TextLine(
         required=False,
-        widget=atapi.StringWidget(
-            label=_(u'label_password', default=u'Password Field'),
-            description=_(
-                u'help_password_field',
-                default=u"""Enter the id of the field that will be used for the
-                            user's password. If the Approval Group Template
-                            field is empty, and this field is empty, users
-                            signing up will be sent a password reset email.
-                            """),
-        ),
-    ),
+        title=_(u'label_password', default=u'Password Field'),
+        description=_(
+            u'help_password_field',
+            default=u"""Enter the id of the field that will be used for the
+                        user's password. If the Approval Group Template
+                        field is empty, and this field is empty, users
+                        signing up will be sent a password reset email.
+                        """),
+    )
 
-    atapi.StringField(
-        'password_verify_field',
+    password_verify_field = schema.TextLine(
         required=False,
-        widget=atapi.StringWidget(
-            label=_(
-                u'label_password_verify',
-                default=u'Password Verify Field'),
-            description=_(
-                u'help_password_verify_field',
-                default=u"""If there is a password and password verify field
-                            and the Approval Group Template field is empty,
-                            Users will be able to set their passwords and login
-                            immediately."""),
-        ),
-    ),
+        title=_(
+            u'label_password_verify',
+            default=u'Password Verify Field'),
+        description=_(
+            u'help_password_verify_field',
+            default=u"""If there is a password and password verify field
+                        and the Approval Group Template field is empty,
+                        Users will be able to set their passwords and login
+                        immediately."""),
+    )
 
-    TALESString(
-        'user_group_template',
-        default="python:{'Administrators': ['*']}",
+    user_group_template = schema.TextLine(
+        default=u"python:{'Administrators': ['*']}",
         required=True,
-        widget=atapi.StringWidget(
-            label=_(
-                u'label_user_group_template',
-                default=u'Add to User Group Template'),
-            description=_(
-                u'help_add_to_user_group_template',
-                default=u"""A TALES expression to calculate the group the user
-                            should be added to. Fields in the form can be used
-                            to populate this. eg string:${department}_${role}.
-                            Leave both this and 'Manage Group Template' empty
-                            to allow creation of user accounts without any
-                            management.
-                            """),
-        ),
-    ),
+        title=_(
+            u'label_user_group_template',
+            default=u'Add to User Group Template'),
+        description=_(
+            u'help_add_to_user_group_template',
+            default=u"""A TALES expression to calculate the group the user
+                        should be added to. Fields in the form can be used
+                        to populate this. eg string:${department}_${role}.
+                        Leave both this and 'Manage Group Template' empty
+                        to allow creation of user accounts without any
+                        management.
+                        """),
+        constraint=isTALES,
+    )
 
-    TALESString(
-        'manage_group_template',
+    manage_group_template = schema.TextLine(
         required=False,
-        widget=atapi.TextAreaWidget(
-            label=_(
-                u'label_manage_group_template',
-                default=u'Manage Group Template'),
-            description=_(
-                u'help_manage_group_template',
-                default=u"""A TALES expression return a dictionary where 'key'
-                            value is which group the 'value' value should be
-                            manage by. Leave both this and
-                            'Add to User Group Template' empty to allow
-                            creation of user accounts without any management.
-                            eg python:{'Administrators': ['group_name']}.
-                            This TALES expression is allowing all the users
-                            under 'group_name' group will be managed by
-                            'Administrators' group."""),
-        ),
-    ),
+        title=_(
+            u'label_manage_group_template',
+            default=u'Manage Group Template'),
+        description=_(
+            u'help_manage_group_template',
+            default=u"""A TALES expression return a dictionary where 'key'
+                        value is which group the 'value' value should be
+                        manage by. Leave both this and
+                        'Add to User Group Template' empty to allow
+                        creation of user accounts without any management.
+                        eg python:{'Administrators': ['group_name']}.
+                        This TALES expression is allowing all the users
+                        under 'group_name' group will be managed by
+                        'Administrators' group."""),
+        constraint=isTALES,
+    )
 
-    atapi.BooleanField(
-        'email_domain_verification',
+    email_domain_verification = schema.Bool(
         default=False,
         required=False,
-        widget=atapi.BooleanWidget(
-            label=_(
-                u'label_email_domain_verification',
-                default=u'Email Domain Verification'),
-            description=_(
-                u'help_email_domain_verification',
-                default=u"""Check this option to have addition 
-                verification for domain in email field need to match with 
-                the association group."""),
-        ),
-    ),
+        title=_(
+            u'label_email_domain_verification',
+            default=u'Email Domain Verification'),
+        description=_(
+            u'help_email_domain_verification',
+            default=u"""Check this option to have addition 
+            verification for domain in email field need to match with 
+            the association group.""")
+    )
+    directives.widget(
+        'email_domain_verification',
+        widget.SingleCheckBoxBoolWidget
+    )
 
-    atapi.StringField(
-        'error_message_email_domain_verification',
+    error_message_email_domain_verification = schema.TextLine(
         required=False,
-        widget=atapi.StringWidget(
-            label=_(u'label_error_message_email_domain_verification',
-                    default=u'Error Message When Email Domain Is Not Match'),
-            description=_(
-                u'help_email_domain_verification',
-                default=u"""Enter error message that will display to the user 
-                when domain of the email address is not match. It will use 
-                default message if this field is blank."""),
-        ),
-    ),
+        title=_(u'label_error_message_email_domain_verification',
+                default=u'Error Message When Email Domain Is Not Match'),
+        description=_(
+            u'help_email_domain_verification',
+            default=u"""Enter error message that will display to the user 
+            when domain of the email address is not match. It will use 
+            default message if this field is blank."""),
+    )
 
-))
+    model.fieldset(
+        'overrides',
+        label=_(u"Overrides"),
+        fields=['execCondition']
+    )
+    directives.read_permission(execCondition=MODIFY_PORTAL_CONTENT)
+    directives.write_permission(execCondition=MODIFY_PORTAL_CONTENT)
+    execCondition = schema.TextLine(
+        title=_(u'label_execcondition_text', default=u'Execution Condition'),
+        description=_(
+            u'help_execcondition_text',
+            default=u'A TALES expression that will be evaluated to determine '
+                    u'whether or not to execute this action. Leave empty if '
+                    u'unneeded, and the action will be executed. Your '
+                    u'expression should evaluate as a boolean; return True '
+                    u'if you wish the action to execute. PLEASE NOTE: errors '
+                    u'in the evaluation of this expression will  cause an '
+                    u'error on form display.'
+        ),
+        default=u'',
+        constraint=isTALES,
+        required=False,
+    )
+
 
 
 def asList(x):
