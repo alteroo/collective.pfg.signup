@@ -1,0 +1,21 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:five="http://namespaces.zope.org/five"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    xmlns:zcml="http://namespaces.zope.org/zcml"
+    i18n_domain="collective.pfg.signup">
+    
+    
+    <configure zcml:condition="installed Products.PloneFormGen">
+        <include package=".pfg" />
+        
+        <class class=".adapter.SignUpAdapter">
+            <implements interface="Products.PloneFormGen.interfaces.IPloneFormGenActionAdapter" />
+        </class>
+    
+        <five:registerPackage package="." initialize=".pfg.initialize" />
+        
+    </configure>
+
+</configure>

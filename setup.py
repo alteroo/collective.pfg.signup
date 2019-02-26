@@ -39,7 +39,7 @@ setup(name='collective.pfg.signup',
       install_requires=[
           'setuptools',
           'Plone',
-          'Products.PloneFormGen',
+          'Products.CMFDefault',
       ],
       extras_require={
         'test': ['plone.app.testing'],

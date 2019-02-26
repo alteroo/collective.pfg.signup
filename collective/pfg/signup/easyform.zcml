@@ -1,0 +1,28 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:five="http://namespaces.zope.org/five"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    xmlns:zcml="http://namespaces.zope.org/zcml"
+    i18n_domain="collective.pfg.signup">
+    
+    <configure zcml:condition="installed collective.easyform">
+    
+        <include package=".easyform" />
+        <class class=".adapter.SignUpAdapter">
+            <implements interface="collective.easyform.interfaces.IAction" />
+        </class>
+
+      <utility
+        name="collective.pfg.signup.easyform.SignupTrigger"
+        component=".easyform.SignupAction"
+        />
+
+      <utility
+        name="collective.pfg.signup.easyform.SignupTrigger"
+        component=".easyform.SignupHandler"
+        />
+
+  </configure>
+
+</configure>

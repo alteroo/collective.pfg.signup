@@ -8,13 +8,6 @@
 
     <includeDependencies package="." />
     
-    <include zcml:condition="installed Products.PloneFormGen"  package=".pfg" />
-    <include zcml:condition="installed collective.easyform"  package=".easyform" />
-
-    <five:registerPackage zcml:condition="installed Products.PloneFormGen"  package="." initialize=".pfg.initialize" />
-
-    <class class=".adapter.SignUpAdapter" />
-
     <!-- Register the installation GenericSetup extension profile -->
     <genericsetup:registerProfile
         name="default"
@@ -23,6 +16,10 @@
         description="A PloneFormGen adapter that saves signup form"
         provides="Products.GenericSetup.interfaces.EXTENSION"
         />
+    
+    <include file="pfg.zcml" />
+    <include file="easyform.zcml" />
+
 
     <browser:page
         for=".interfaces.ISignUpAdapter"

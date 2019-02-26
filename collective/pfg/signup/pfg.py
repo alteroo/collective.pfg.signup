@@ -1,9 +1,21 @@
 """Initialise module package."""
+from BTrees.OOBTree import OOBTree
 from Products.Archetypes import atapi
+from Products.ATContentTypes.content.base import registerATCT
 from Products.CMFCore import utils
+from Products.PloneFormGen.content.actionAdapter import FormActionAdapter
+from Products.PloneFormGen.content.actionAdapter import FormAdapterSchema
+from Products.PloneFormGen.interfaces import IPloneFormGenActionAdapter
+from Products.TALESField import TALESString
 
 from collective.pfg.signup import _
 from collective.pfg.signup import config
+from collective.pfg.signup import fields as signupFields
+from collective.pfg.signup.adapter import SignUpAdapter as BaseSignUpAdapter
+from collective.pfg.signup.interfaces import ISignUpAdapter
+from zope import schema
+from zope.interface import implements
+from z3c.form.field import Fields
 
 
 def initialize(context):
@@ -32,3 +44,65 @@ def initialize(context):
                           permission=config.ADD_PERMISSIONS[atype.portal_type],
                           extra_constructors=(constructor,),
                           ).initialize(context)
+
+
+# SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
+
+#     atapi.StringField(
+#         'full_name_field',
+#         **signupFields.full_name_field(False)
+#     ),
+
+#     atapi.StringField(
+#         'username_field',
+#         **signupFields.username_field(False)
+#     ),
+
+#     atapi.StringField(
+#         'email_field',
+#         **signupFields.email_field(False)
+#     ),
+
+#     atapi.StringField(
+#         'password_field',
+#         **signupFields.password_field(False)
+#     ),
+
+#     atapi.StringField(
+#         'password_verify_field',
+#         **signupFields.password_verify_field(False)
+#     ),
+
+#     TALESString(
+#         'user_group_template',
+#         **signupFields.user_group_template(False)
+#     ),
+
+#     TALESString(
+#         'manage_group_template',
+#         **signupFields.manage_group_template(False)
+#     ),
+
+#     atapi.BooleanField(
+#         'email_domain_verification',
+#         **signupFields.email_domain_verification(False)
+#     ),
+
+#     atapi.StringField(
+#         'error_message_email_domain_verification',
+#         **signupFields.error_message_email_domain_verification(False)
+#     )
+
+# ))
+
+
+# class SignUpAdapter(BaseSignUpAdapter, FormActionAdapter):
+#     implements(IPloneFormGenActionAdapter, ISignUpAdapter)
+#     schema = SignUpAdapterSchema
+
+#     def __init__(self, oid, **kwargs):
+#         """Initialize class."""
+#         FormActionAdapter.__init__(self, oid, **kwargs)
+#         self.waiting_list = OOBTree()
+
+# registerATCT(SignUpAdapter, config.PROJECTNAME)
